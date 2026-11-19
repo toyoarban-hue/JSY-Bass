@@ -318,8 +318,8 @@
           </div>
 
           <div class="form-group">
-            <label for="fishLength">長寸 (cm)</label>
-            <input type="number" id="fishLength" step="0.1" placeholder="例：62.5" required>
+            <label for="fishLength">サイズ(30cm以上、小数点以下切り捨て）</label>
+            <input type="number" id="fishLength" min="30" step="any" placeholder="例：45" required>
           </div>
 
           <div class="form-group">
@@ -443,6 +443,12 @@
       reader.readAsDataURL(file);
     });
 
+    function floorSize(val) {
+      const num = Number(val);
+      if (isNaN(num)) return 0;
+      return Math.floor(num);
+    }
+
     function formatTimeAgo(isoString) {
       const date = new Date(isoString);
       if (isNaN(date.getTime())) return isoString;
@@ -468,6 +474,7 @@
 
       const newestFirst = [...posts].reverse();
       feedList.innerHTML = newestFirst.map(post => {
+        const sizeVal = floorSize(post.fishLength);
         const commentHtml = post.comment
           ? `<div class="feed-comment">${escapeHtml(post.comment)}</div>`
           : '';
@@ -477,7 +484,7 @@
             <div class="feed-body">
               <div class="feed-top">
                 <span class="feed-angler">${escapeHtml(post.anglerName)}</span>
-                <span class="feed-size">${Number(post.fishLength).toFixed(1)} cm</span>
+                <span class="feed-size">${sizeVal} cm</span>
               </div>
               ${commentHtml}
               <div class="feed-meta">${formatTimeAgo(post.timestamp)}</div>
@@ -497,14 +504,15 @@
         return;
       }
 
-      const bigFish = [...posts].sort((a, b) => b.fishLength - a.fishLength)[0];
+      const bigFish = [...posts].sort((a, b) => floorSize(b.fishLength) - floorSize(a.fishLength))[0];
+      const bigFishSize = floorSize(bigFish.fishLength);
       bigFishArea.innerHTML = `
         <div class="big-fish-card">
           <div class="big-fish-label">BIG ONE AWARD</div>
           <div class="big-fish-content">
             <img src="${escapeHtml(bigFish.imageUrl)}" alt="最大魚">
             <div>
-              <div class="big-fish-record">${Number(bigFish.fishLength).toFixed(1)} cm</div>
+              <div class="big-fish-record">${bigFishSize} cm</div>
               <div class="big-fish-sub">${escapeHtml(bigFish.anglerName)}</div>
             </div>
           </div>
@@ -516,7 +524,7 @@
         const name = post.anglerName.trim();
         if (!name) return;
         if (!byAngler[name]) byAngler[name] = [];
-        byAngler[name].push(Number(post.fishLength) || 0);
+        byAngler[name].push(floorSize(post.fishLength));
       });
 
       const rankings = Object.entries(byAngler).map(([name, lengths]) => {
@@ -526,14 +534,14 @@
         return {
           name,
           top3,
-          total: Number(total.toFixed(1))
+          total
         };
       }).sort((a, b) => b.total - a.total);
 
       rankingList.innerHTML = rankings.map((r, index) => {
         const rankNum = index + 1;
         const badgeClass = rankNum <= 3 ? `rank-${rankNum}` : '';
-        const detailText = r.top3.map(n => n.toFixed(1)).join(' / ');
+        const detailText = r.top3.map(n => String(n)).join(' / ');
         return `
           <div class="ranking-card">
             <div class="rank-badge ${badgeClass}">${rankNum}</div>
@@ -543,7 +551,7 @@
             </div>
             <div class="ranking-total-wrap">
               <span class="ranking-total-label">合計</span>
-              <span class="ranking-total-num">${r.total.toFixed(1)}<small style="font-size:0.7rem;">cm</small></span>
+              <span class="ranking-total-num">${r.total}<small style="font-size:0.7rem;">cm</small></span>
             </div>
           </div>
         `;
@@ -572,7 +580,7 @@
 
     document.getElementById('submitBtn').addEventListener('click', async () => {
       const name = document.getElementById('anglerName').value.trim();
-      const length = document.getElementById('fishLength').value;
+      const rawLength = Number(document.getElementById('fishLength').value);
       const comment = document.getElementById('fishComment').value.trim();
 
       if (GAS_WEB_APP_URL === 'ここにコピーしたURLを貼り付け' || !GAS_WEB_APP_URL) {
@@ -580,10 +588,17 @@
         return;
       }
 
-      if (!name || !length || !compressedImageBase64) {
-        alert('参加者名、長寸、写真をすべて入力してください。');
+      if (!name || !document.getElementById('fishLength').value || isNaN(rawLength) || !compressedImageBase64) {
+        alert('参加者名、サイズ、写真をすべて入力してください。');
         return;
       }
+
+      if (rawLength < 30) {
+        alert('サイズは30cm以上を入力してください。');
+        return;
+      }
+
+      const flooredLength = Math.floor(rawLength);
 
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
@@ -594,7 +609,7 @@
           method: 'POST',
           body: JSON.stringify({
             anglerName: name,
-            fishLength: length,
+            fishLength: flooredLength,
             comment: comment,
             imageBase64: compressedImageBase64
           })
