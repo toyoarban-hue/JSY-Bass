@@ -119,6 +119,7 @@
       color: #444;
     }
     .form-group input,
+    .form-group select,
     .form-group textarea {
       width: 100%;
       padding: 11px 12px;
@@ -127,6 +128,7 @@
       font-size: 1rem;
       background: #fff;
       font-family: inherit;
+      color: #222;
     }
     .form-group textarea {
       font-size: 0.92rem;
@@ -344,7 +346,9 @@
         <form id="postForm">
           <div class="form-group">
             <label for="anglerName">参加者名</label>
-            <input type="text" id="anglerName" placeholder="例：山田" required>
+            <select id="anglerName" required>
+              <option value="">選択してください</option>
+            </select>
           </div>
 
           <div class="form-group">
@@ -402,6 +406,33 @@
 
   <script>
     const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyxvh0xbj10FTY7ZS2Gwwm3dA1H-kLRbIZKMbtDBoak7TujIooLCxCCi2y9DMc2JdF-/exec';
+
+    // 実際の参加者名に書き換えてください
+    const ANGLER_LIST = [
+      '佐藤',
+      '吉岡',
+      '森田',
+      '大室',
+      '西',
+      '錦織',
+      '錦織 妻',
+      '林',
+      '小林',
+      '芝',
+      '大澤',
+      '染谷',
+      'OSP折金プロ',
+      'OSP岡田さん',
+      'ゲスト'
+    ];
+
+    const anglerSelect = document.getElementById('anglerName');
+    ANGLER_LIST.forEach((person) => {
+      const option = document.createElement('option');
+      option.value = person;
+      option.textContent = person;
+      anglerSelect.appendChild(option);
+    });
 
     const pagesContainer = document.getElementById('pagesContainer');
     const tabBtns = document.querySelectorAll('.tab-btn');
