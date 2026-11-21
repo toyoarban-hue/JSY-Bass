@@ -328,10 +328,15 @@
     .rank-2 { background: #c0c0c0; color: #333; }
     .rank-3 { background: #cd7f32; color: #fff; }
 
-    .ranking-info { flex-grow: 1; }
+    .ranking-info { flex-grow: 1; min-width: 0; }
     .ranking-name { font-weight: bold; font-size: 0.95rem; }
-    .ranking-detail { font-size: 0.75rem; color: #666; margin-top: 2px; }
-    .ranking-total-wrap { text-align: right; }
+    .ranking-detail {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #555;
+      margin-top: 3px;
+    }
+    .ranking-total-wrap { text-align: right; flex-shrink: 0; margin-left: 8px; }
     .ranking-total-label { font-size: 0.65rem; color: #666; display: block; }
     .ranking-total-num { font-size: 1.15rem; font-weight: bold; color: #0f4c81; }
     .empty-msg {
@@ -431,7 +436,7 @@
       '佐藤 (本社)',
       '森田 (市原店)',
       '西 (奥戸店)',
-      '大室 (鴻巣店)',
+      '大室(鴻巣店)',
       '小林 (つきみ野店)',
       '林 (木更津店)',
       '芝 (木更津店)',
