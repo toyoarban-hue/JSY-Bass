@@ -96,18 +96,21 @@
       margin-bottom: 14px;
     }
     .section-heading {
-      font-size: 0.82rem;
+      font-size: 0.95rem;
       font-weight: bold;
       color: #0f4c81;
       margin-bottom: 10px;
-      padding-left: 48px;
-      padding-right: 48px;
       display: flex;
       justify-content: center;
       align-items: center;
       position: relative;
       text-align: center;
       white-space: nowrap;
+    }
+    .section-heading.heading-long {
+      font-size: 0.78rem;
+      padding-left: 44px;
+      padding-right: 44px;
     }
     .section-heading .refresh-btn {
       position: absolute;
@@ -404,7 +407,7 @@
 
     <!-- ③ 順位表＋現時点の最大魚 -->
     <section class="page" id="page-ranking">
-      <div class="section-heading">
+      <div class="section-heading heading-long">
         <span>現時点の最大魚（シングルレコード）</span>
         <button type="button" class="refresh-btn" id="refreshRankBtn">更新</button>
       </div>
