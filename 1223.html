@@ -409,9 +409,9 @@
   <header>
     <h1>ＪＳＹバス例会、オールスター<span class="title-sub">12/23 相模湖</span></h1>
     <div class="tab-bar">
-      <button class="tab-btn active" data-index="0">① 投稿</button>
-      <button class="tab-btn" data-index="1">② フィード</button>
-      <button class="tab-btn" data-index="2">③ 順位・最大</button>
+      <button type="button" class="tab-btn active" data-index="0">① 投稿</button>
+      <button type="button" class="tab-btn" data-index="1">② フィード</button>
+      <button type="button" class="tab-btn" data-index="2">③ 順位・最大</button>
     </div>
   </header>
 
@@ -426,6 +426,21 @@
             <label for="anglerName">参加者名</label>
             <select id="anglerName" required>
               <option value="">選択してください</option>
+              <option value="吉岡 (新つくば店)">吉岡 (新つくば店)</option>
+              <option value="佐藤 (本社)">佐藤 (本社)</option>
+              <option value="森田 (市原店)">森田 (市原店)</option>
+              <option value="西 (奥戸店)">西 (奥戸店)</option>
+              <option value="大室(鴻巣店)">大室(鴻巣店)</option>
+              <option value="小林 (つきみ野店)">小林 (つきみ野店)</option>
+              <option value="林 (木更津店)">林 (木更津店)</option>
+              <option value="芝 (木更津店)">芝 (木更津店)</option>
+              <option value="大澤 (市原店)">大澤 (市原店)</option>
+              <option value="錦織 (美浜店)">錦織 (美浜店)</option>
+              <option value="錦織 妻">錦織 妻</option>
+              <option value="染谷 (OB)">染谷 (OB)</option>
+              <option value="OSP折金プロ">OSP折金プロ</option>
+              <option value="OSP岡田さん">OSP岡田さん</option>
+              <option value="井上 (圏央厚木店)">井上 (圏央厚木店)</option>
             </select>
           </div>
 
@@ -485,7 +500,6 @@
   <script>
     const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxOoHBCpGsrnDYF7FFx2Lopgu-rDwtECyiW9dOe7EmJa3ugQpLZ0sNNxSnrfy37hhEh/exec';
 
-    // 12:00〜14:00 のシークレット時間帯（14:00以降は全員閲覧可）
     const LOCK_START_MINUTES = 12 * 60;
     const LOCK_END_MINUTES = 14 * 60;
     const ADMIN_PASSCODE = '1223';
@@ -494,22 +508,226 @@
     let feedLockError = '';
     let rankLockError = '';
 
-    const ANGLER_LIST = [
-      '吉岡 (新つくば店)',
-      '佐藤 (本社)',
-      '森田 (市原店)',
-      '西 (奥戸店)',
-      '大室(鴻巣店)',
-      '小林 (つきみ野店)',
-      '林 (木更津店)',
-      '芝 (木更津店)',
-      '大澤 (市原店)',
-      '錦織 (美浜店)',
-      '錦織 妻',
-      '染谷 (OB)',
-      'OSP折金プロ',
-      'OSP岡田さん',
-      '井上 (圏央厚木店)'
-    ];
+    const pagesContainer = document.getElementById('pagesContainer');
+    const tabBtns = document.querySelectorAll('.tab-btn');
 
-    const anglerSelect
+    function setActiveTab(index) {
+      tabBtns.forEach((btn, idx) => {
+        btn.classList.toggle('active', idx === index);
+      });
+    }
+
+    tabBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const index = Number(btn.dataset.index);
+        setActiveTab(index);
+        pagesContainer.scrollTo({
+          left: pagesContainer.clientWidth * index,
+          behavior: 'smooth'
+        });
+      });
+    });
+
+    pagesContainer.addEventListener('scroll', () => {
+      if (!pagesContainer.clientWidth) return;
+      const currentIndex = Math.round(pagesContainer.scrollLeft / pagesContainer.clientWidth);
+      setActiveTab(currentIndex);
+    });
+
+    const photoInput = document.getElementById('photoInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const compressInfo = document.getElementById('compressInfo');
+    let compressedImageBase64 = '';
+
+    photoInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const originalSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDimension = 1000;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDimension) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            }
+          } else {
+            if (height > maxDimension) {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          compressedImageBase64 = canvas.toDataURL('image/jpeg', 0.75);
+          const compressedSizeKB = ((compressedImageBase64.length * 3) / 4 / 1024).toFixed(1);
+
+          imagePreview.src = compressedImageBase64;
+          compressInfo.innerHTML = '軽量化完了: ' + originalSizeMB + ' MB ➔ <b>' + compressedSizeKB + ' KB</b>';
+          previewContainer.style.display = 'block';
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function floorSize(val) {
+      const num = Number(val);
+      if (isNaN(num)) return 0;
+      return Math.floor(num);
+    }
+
+    function formatTimeAgo(isoString) {
+      const date = new Date(isoString);
+      if (isNaN(date.getTime())) return isoString;
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return hours + ':' + minutes;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function isSecretTimeWindow() {
+      const now = new Date();
+      const minutes = now.getHours() * 60 + now.getMinutes();
+      return minutes >= LOCK_START_MINUTES && minutes < LOCK_END_MINUTES;
+    }
+
+    function canViewSecretContent() {
+      return !isSecretTimeWindow() || isAdminUnlocked;
+    }
+
+    function renderLockBox(targetId, errorMsg) {
+      const target = document.getElementById(targetId);
+      const errHtml = errorMsg ? '<div class="lock-error">' + escapeHtml(errorMsg) + '</div>' : '';
+      target.innerHTML =
+        '<div class="lock-card">' +
+          '<div class="lock-title">🔒 12:00〜14:00 シークレットタイム</div>' +
+          '<div class="lock-desc">結果発表までの間、フィードと順位表は非表示です（投稿は引き続き可能です）。<br>14:00以降に再度全員閲覧可能になります。</div>' +
+          '<div class="lock-form">' +
+            '<input type="password" class="lock-input" data-role="admin-pass" placeholder="管理者パス">' +
+            '<button type="button" class="lock-btn" data-role="admin-unlock">解除</button>' +
+          '</div>' +
+          errHtml +
+        '</div>';
+    }
+
+    function bindLockEvents() {
+      document.querySelectorAll('[data-role="admin-unlock"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const card = btn.closest('.lock-card');
+          const input = card ? card.querySelector('[data-role="admin-pass"]') : null;
+          const entered = input ? input.value.trim() : '';
+
+          if (entered === ADMIN_PASSCODE) {
+            isAdminUnlocked = true;
+            sessionStorage.setItem('jsy_1223_admin_unlocked', '1');
+            feedLockError = '';
+            rankLockError = '';
+            renderFeed(latestPosts);
+            renderRanking(latestPosts);
+          } else {
+            feedLockError = 'パスワードが違います。';
+            rankLockError = 'パスワードが違います。';
+            renderFeed(latestPosts);
+            renderRanking(latestPosts);
+          }
+        });
+      });
+    }
+
+    function renderFeed(posts) {
+      const feedList = document.getElementById('feedList');
+
+      if (!canViewSecretContent()) {
+        renderLockBox('feedList', feedLockError);
+        bindLockEvents();
+        return;
+      }
+
+      if (!posts || posts.length === 0) {
+        feedList.innerHTML = '<div class="empty-msg">まだ釣果の投稿がありません。</div>';
+        return;
+      }
+
+      const newestFirst = [...posts].reverse();
+      feedList.innerHTML = newestFirst.map(post => {
+        const sizeVal = floorSize(post.fishLength);
+        const commentHtml = post.comment
+          ? '<div class="feed-comment">' + escapeHtml(post.comment) + '</div>'
+          : '';
+        return (
+          '<div class="feed-card">' +
+            '<img src="' + escapeHtml(post.imageUrl) + '" alt="釣果写真" loading="lazy">' +
+            '<div class="feed-body">' +
+              '<div class="feed-top">' +
+                '<span class="feed-angler">' + escapeHtml(post.anglerName) + '</span>' +
+                '<span class="feed-size">' + sizeVal + ' cm</span>' +
+              '</div>' +
+              commentHtml +
+              '<div class="feed-meta">' + formatTimeAgo(post.timestamp) + '</div>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+    }
+
+    function renderRanking(posts) {
+      const bigFishArea = document.getElementById('bigFishArea');
+      const rankingList = document.getElementById('rankingList');
+
+      if (!canViewSecretContent()) {
+        renderLockBox('bigFishArea', rankLockError);
+        rankingList.innerHTML = '<div class="empty-msg">🔒 12:00〜14:00 は順位表を非表示中です。</div>';
+        bindLockEvents();
+        return;
+      }
+
+      if (!posts || posts.length === 0) {
+        bigFishArea.innerHTML = '<div class="empty-msg">まだ記録がありません。</div>';
+        rankingList.innerHTML = '<div class="empty-msg">まだ順位データがありません。</div>';
+        return;
+      }
+
+      const maxSize = Math.max(...posts.map(p => floorSize(p.fishLength)));
+      const bigFishList = posts.filter(p => floorSize(p.fishLength) === maxSize);
+      const isTie = bigFishList.length > 1;
+
+      bigFishArea.innerHTML = bigFishList.map((fish) => {
+        const fishSize = floorSize(fish.fishLength);
+        const fishTime = formatTimeAgo(fish.timestamp);
+        const labelText = isTie ? ('BIG ONE タイ記録（' + bigFishList.length + '名）') : 'BIG ONE AWARD';
+        const commentHtml = fish.comment
+          ? '<div class="big-fish-comment">' + escapeHtml(fish.comment) + '</div>'
+          : '';
+
+        return (
+          '<div class="big-fish-card">' +
+            '<div class="big-fish-header">' +
+              '<span class="big-fish-label">' + escapeHtml(labelText) + '</span>' +
+              '<span class="big-fish-time">' + escapeHtml(fishTime) + '</span>' +
+            '</div>' +
+            '<div class="big-fish-content">' +
+              '<img src="' + escapeHtml(fish.imageUrl) + '" alt="最大魚">' +
+              '<div class="big-fish-info">' +
+                '<div class="big-fish-record">' + fishSize + ' cm</div>' +
+                '<div class="big-fish-sub">' + escapeHtml(fish.anglerName) + '</div>
