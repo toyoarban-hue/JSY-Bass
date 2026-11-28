@@ -66,26 +66,22 @@
     }
 
     .pages-container {
-      display: flex;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      scroll-behavior: smooth;
       flex: 1;
       min-height: 0;
-      -webkit-overflow-scrolling: touch;
-    }
-    .pages-container::-webkit-scrollbar {
-      display: none;
+      width: 100%;
+      overflow: hidden;
     }
 
     .page {
-      flex: 0 0 100%;
+      display: none;
       width: 100%;
       height: 100%;
-      scroll-snap-align: start;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       padding: 16px 16px 64px;
+    }
+    .page.active {
+      display: block;
     }
 
     .card {
@@ -418,7 +414,7 @@
   <div class="pages-container" id="pagesContainer">
 
     <!-- ① 投稿専用画面 -->
-    <section class="page" id="page-post">
+    <section class="page active" id="page-post">
       <div class="section-heading">釣果の検量投稿</div>
       <div class="card">
         <form id="postForm">
@@ -508,12 +504,15 @@
     let feedLockError = '';
     let rankLockError = '';
 
-    const pagesContainer = document.getElementById('pagesContainer');
+    const pages = document.querySelectorAll('.page');
     const tabBtns = document.querySelectorAll('.tab-btn');
 
     function setActiveTab(index) {
       tabBtns.forEach((btn, idx) => {
         btn.classList.toggle('active', idx === index);
+      });
+      pages.forEach((page, idx) => {
+        page.classList.toggle('active', idx === index);
       });
     }
 
@@ -521,17 +520,7 @@
       btn.addEventListener('click', () => {
         const index = Number(btn.dataset.index);
         setActiveTab(index);
-        pagesContainer.scrollTo({
-          left: pagesContainer.clientWidth * index,
-          behavior: 'smooth'
-        });
       });
-    });
-
-    pagesContainer.addEventListener('scroll', () => {
-      if (!pagesContainer.clientWidth) return;
-      const currentIndex = Math.round(pagesContainer.scrollLeft / pagesContainer.clientWidth);
-      setActiveTab(currentIndex);
     });
 
     const photoInput = document.getElementById('photoInput');
@@ -730,4 +719,127 @@
               '<img src="' + escapeHtml(fish.imageUrl) + '" alt="最大魚">' +
               '<div class="big-fish-info">' +
                 '<div class="big-fish-record">' + fishSize + ' cm</div>' +
-                '<div class="big-fish-sub">' + escapeHtml(fish.anglerName) + '</div>
+                '<div class="big-fish-sub">' + escapeHtml(fish.anglerName) + '</div>' +
+                commentHtml +
+              '</div>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+
+      const byAngler = {};
+      posts.forEach(post => {
+        const name = post.anglerName.trim();
+        if (!name) return;
+        if (!byAngler[name]) byAngler[name] = [];
+        byAngler[name].push(floorSize(post.fishLength));
+      });
+
+      const rankings = Object.entries(byAngler).map(([name, lengths]) => {
+        const sorted = [...lengths].sort((a, b) => b - a);
+        const top3 = sorted.slice(0, 3);
+        const total = top3.reduce((sum, n) => sum + n, 0);
+        return { name, top3, total };
+      }).sort((a, b) => b.total - a.total);
+
+      let currentRank = 1;
+      rankingList.innerHTML = rankings.map((r, index) => {
+        if (index > 0 && r.total < rankings[index - 1].total) {
+          currentRank = index + 1;
+        }
+        const badgeClass = currentRank <= 3 ? ('rank-' + currentRank) : '';
+        const detailText = r.top3.map(n => String(n)).join(' / ');
+        return (
+          '<div class="ranking-card">' +
+            '<div class="rank-badge ' + badgeClass + '">' + currentRank + '</div>' +
+            '<div class="ranking-info">' +
+              '<div class="ranking-name">' + escapeHtml(r.name) + '</div>' +
+              '<div class="ranking-detail">上位3匹(' + r.top3.length + '匹集計): ' + detailText + ' cm</div>' +
+            '</div>' +
+            '<div class="ranking-total-wrap">' +
+              '<span class="ranking-total-label">合計</span>' +
+              '<span class="ranking-total-num">' + r.total + '<small style="font-size:0.7rem;">cm</small></span>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+    }
+
+    async function loadTournamentData() {
+      if (!GAS_WEB_APP_URL) return;
+
+      try {
+        const res = await fetch(GAS_WEB_APP_URL);
+        const data = await res.json();
+        if (data.status === 'success') {
+          latestPosts = data.posts || [];
+          renderFeed(latestPosts);
+          renderRanking(latestPosts);
+        } else {
+          console.error('読み込みエラー:', data.message);
+        }
+      } catch (err) {
+        console.error('通信エラー:', err);
+      }
+    }
+
+    document.getElementById('refreshFeedBtn').addEventListener('click', loadTournamentData);
+    document.getElementById('refreshRankBtn').addEventListener('click', loadTournamentData);
+
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      const name = document.getElementById('anglerName').value.trim();
+      const rawLength = Number(document.getElementById('fishLength').value);
+      const comment = document.getElementById('fishComment').value.trim();
+
+      if (!name || !document.getElementById('fishLength').value || isNaN(rawLength) || !compressedImageBase64) {
+        alert('参加者名、サイズ、写真をすべて入力してください。');
+        return;
+      }
+
+      if (rawLength < 30) {
+        alert('サイズは30cm以上を入力してください。');
+        return;
+      }
+
+      const flooredLength = Math.floor(rawLength);
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerText = '送信中...';
+
+      try {
+        const response = await fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            anglerName: name,
+            fishLength: flooredLength,
+            comment: comment,
+            imageBase64: compressedImageBase64
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+          alert('投稿が完了しました！');
+          document.getElementById('postForm').reset();
+          document.getElementById('previewContainer').style.display = 'none';
+          compressedImageBase64 = '';
+
+          await loadTournamentData();
+          setActiveTab(1);
+        } else {
+          alert('送信エラー: ' + result.message);
+        }
+      } catch (err) {
+        alert('通信エラーが発生しました: ' + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = '検量を送信する';
+      }
+    });
+
+    loadTournamentData();
+  </script>
+</body>
+</html>
